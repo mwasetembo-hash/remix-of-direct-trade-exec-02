@@ -1,4 +1,4 @@
-import { formatOffset, barrierErrors, derivBarriers } from "@/lib/barriers";
+import { formatOffset, barrierErrors, derivBarriers, barrierCandidates } from "@/lib/barriers";
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { DerivClient, computeSignal, fetchAccounts, fetchOtpUrl, type DerivAccount } from "@/lib/deriv";
@@ -371,6 +371,33 @@ function Dashboard() {
       return null;
     }
     };
+    // Quote each barrier order first (quotes cost nothing); shrink the offset until Deriv accepts it.
+    const isBarrierErr = (e: any) => /barrier/i.test(String(e?.message ?? "") + String(e?.code ?? ""));
+    if (def.barrier === "offset" || def.barrier === "range") {
+      for (const order of prepared) {
+        const sug = derivBarriers(cfList, order.ct, unit);
+        const fields: ("barrier" | "barrier2")[] = def.barrier === "range" ? ["barrier", "barrier2"] : ["barrier"];
+        const wanted = fields.map((f) => Number(order.req[f]));
+        const lists = fields.map((f, i) => barrierCandidates(wanted[i]!, f === "barrier" ? sug?.barrier ?? null : sug?.barrier2 ?? null, decimals));
+        let ok = false, lastErr = "";
+        for (let k = 0; k < Math.max(...lists.map((l) => l.length)); k++) {
+          fields.forEach((f, i) => { const l = lists[i]!; order.req[f] = formatOffset(l[Math.min(k, l.length - 1)]!, decimals); });
+          try { await c.send(order.req); ok = true; break; }
+          catch (e: any) { lastErr = e.message; if (!isBarrierErr(e)) { ok = true; break; } }
+        }
+        if (!ok) {
+          orderLock.current = false; setBusy(false);
+          const msg = `${order.ct} on ${symbol}: Deriv refused every barrier from ${fields.map((_, i) => formatOffset(wanted[i]!, decimals)).join("/")} down${sug ? ` to ${sug.raw}` : ""} (${lastErr})`;
+          addLog(`Order blocked: ${msg}`); setError(msg); return null;
+        }
+        const used = fields.map((f) => String(order.req[f])).join("/");
+        const asked = fields.map((_, i) => formatOffset(wanted[i]!, decimals)).join("/");
+        if (used !== asked) {
+          addLog(`Barrier ${asked} too far for ${symbol} at ${duration}${unit} — Deriv accepts ${used}, using it`);
+          if (def.barrier === "offset") setOffset(Number(order.req["barrier"]));
+        }
+      }
+    }
     try {
       if (paired) addLog(`PAIR dispatch together · ${duration}${unit} per side · Deriv controls exact timing`);
       const purchases = await dispatchTogether(prepared.map(order => () => buyOrder(order)));

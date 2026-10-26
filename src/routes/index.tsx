@@ -1,3 +1,4 @@
+import { formatOffset, barrierErrors } from "@/lib/barriers";
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { DerivClient, computeSignal, fetchAccounts, fetchOtpUrl, type DerivAccount } from "@/lib/deriv";
@@ -245,6 +246,7 @@ function Dashboard() {
     if (def.ticks && (duration < def.ticks[0] || duration > def.ticks[1])) errs.push(`${def.label} needs ${def.ticks[0]}-${def.ticks[1]} ticks`);
     if (!def.open && !(duration > 0)) errs.push("Duration must be above 0");
     if (def.barrier === "digit" && (digit < 0 || digit > 9)) errs.push("Digit must be 0-9");
+    errs.push(...barrierErrors(kind, def.barrier, { offset, hi, lo, decimals, duration, unit, symbol }));
     if (kind === "OVER_UNDER" && (doubleDigit < 0 || doubleDigit > 9)) errs.push("Under digit must be 0-9");
     if (kind === "RUNS" && !/^(R_|1HZ)/.test(symbol)) errs.push("Only Ups/Downs works on Volatility indices (R_ / 1s)");
     if (prices.length < 20) errs.push("Waiting for live ticks");
@@ -293,7 +295,7 @@ function Dashboard() {
     if (def.extra === "selected_tick") req["selected_tick"] = selectedTick;
     if (def.extra === "multiplier") { req["multiplier"] = multiplier; req["limit_order"] = { take_profit: tpAmt, stop_loss: slAmt }; }
     if (def.extra === "growth_rate") { req["growth_rate"] = growthRate; req["limit_order"] = { take_profit: tpAmt }; }
-    const sgn = (n: number) => (n >= 0 ? `+${n}` : `${n}`);
+    const sgn = (n: number) => formatOffset(n, decimals);
     if (def.barrier === "digit") req["barrier"] = String(sideDigit);
     if (def.barrier === "offset") req["barrier"] = sgn(offset);
     if (def.barrier === "range") { req["barrier"] = sgn(hi); req["barrier2"] = sgn(lo); }

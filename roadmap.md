@@ -1,5 +1,5 @@
 # Tasks
-- [ ] Fix "Invalid barrier" on R_50 and 1HZ100V using Deriv-allowed barriers.
+- [x] Fix "Invalid barrier" on R_50 and 1HZ100V using Deriv-allowed barriers.
 - [ ] Coordinate double-order dispatch and expiry, and test paired execution.
 - [x] Add a live mining-style console and demo-only strategy comparison.
 - [x] Enforce adjustable balance-based stake protection without weakening confirmation rules.

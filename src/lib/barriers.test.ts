@@ -10,3 +10,10 @@ describe("barriers", () => {
   it("rejects zero offset", () => expect(barrierErrors("HIGHER_LOWER", "offset", { ...base, offset: 0 }).length).toBe(1));
   it("rejects positive low barrier", () => expect(barrierErrors("ENDS", "range", { ...base, lo: 0.5 }).length).toBe(1));
 });
+
+import { derivBarriers } from "./barriers";
+describe("derivBarriers", () => {
+  const list = [{ contract_type: "CALL", barriers: 1, expiry_type: "tick", barrier: "+0.1" }, { contract_type: "CALL", barriers: 1, expiry_type: "intraday", barrier: "+0.61" }];
+  it("picks tick default for ticks", () => expect(derivBarriers(list, "CALL", "t")?.barrier).toBe(0.1));
+  it("picks intraday default for minutes", () => expect(derivBarriers(list, "CALL", "m")?.barrier).toBe(0.61));
+});

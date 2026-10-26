@@ -35,3 +35,16 @@ export function derivBarriers(list: any[], contractType: string, unit: string): 
   const n = (v: unknown) => (v == null || !/^[+-]/.test(String(v)) ? null : Number(v));
   return { barrier: n(b), barrier2: n(b2), raw: b2 != null ? `${b} / ${b2}` : String(b) };
 }
+
+/** Offsets to try, from the trader's value shrinking toward Deriv's default, keeping the sign. */
+export function barrierCandidates(wanted: number, derivDefault: number | null, decimals: number, steps = 7): number[] {
+  const sign = wanted < 0 ? -1 : 1;
+  const start = Math.abs(wanted);
+  const floor = derivDefault != null && Math.abs(derivDefault) > 0 ? Math.min(Math.abs(derivDefault), start) : start / 50;
+  const out: number[] = [];
+  for (let i = 0; i <= steps; i++) {
+    const v = Number((start * (floor / start) ** (i / steps)).toFixed(decimals));
+    if (v > 0 && !out.includes(sign * v)) out.push(sign * v);
+  }
+  return out;
+}

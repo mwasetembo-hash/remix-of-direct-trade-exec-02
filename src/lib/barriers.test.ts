@@ -17,3 +17,9 @@ describe("derivBarriers", () => {
   it("picks tick default for ticks", () => expect(derivBarriers(list, "CALL", "t")?.barrier).toBe(0.1));
   it("picks intraday default for minutes", () => expect(derivBarriers(list, "CALL", "m")?.barrier).toBe(0.61));
 });
+
+import { barrierCandidates } from "./barriers";
+describe("barrierCandidates", () => {
+  it("starts at +0.61 and ends at Deriv default", () => { const c = barrierCandidates(0.61, 0.0066, 4); expect(c[0]).toBe(0.61); expect(c.at(-1)).toBe(0.0066); });
+  it("keeps negative sign", () => expect(barrierCandidates(-0.61, 0.0066, 4).every((v) => v < 0)).toBe(true));
+});

@@ -23,3 +23,15 @@ export function barrierErrors(kind: string, barrier: "none" | "offset" | "digit"
   }
   return errs;
 }
+
+/** Deriv's own default barrier(s) for a contract type at this duration unit, from contracts_for. */
+export function derivBarriers(list: any[], contractType: string, unit: string): { barrier: number | null; barrier2: number | null; raw: string } | null {
+  const expiry = unit === "t" ? ["tick"] : unit === "d" ? ["daily"] : ["intraday", "daily"];
+  const c = list.find((x) => x?.contract_type === contractType && Number(x?.barriers) > 0 && expiry.includes(String(x?.expiry_type)));
+  if (!c) return null;
+  const b = c.barrier ?? c.high_barrier;
+  const b2 = c.low_barrier ?? null;
+  if (b == null) return null;
+  const n = (v: unknown) => (v == null || !/^[+-]/.test(String(v)) ? null : Number(v));
+  return { barrier: n(b), barrier2: n(b2), raw: b2 != null ? `${b} / ${b2}` : String(b) };
+}

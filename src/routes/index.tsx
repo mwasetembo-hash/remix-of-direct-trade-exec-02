@@ -1,4 +1,4 @@
-import { formatOffset, barrierErrors } from "@/lib/barriers";
+import { formatOffset, barrierErrors, derivBarriers } from "@/lib/barriers";
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { DerivClient, computeSignal, fetchAccounts, fetchOtpUrl, type DerivAccount } from "@/lib/deriv";
@@ -74,6 +74,7 @@ function Dashboard() {
   const [tpAmt, setTpAmt] = useState(1);
   const [slAmt, setSlAmt] = useState(1);
   const [available, setAvailable] = useState<Set<string> | null>(null);
+  const [cfList, setCfList] = useState<any[]>([]);
   const lastSettle = useRef(0);
   const lastWaitLog = useRef(0);
   const [maxLoss, setMaxLoss] = useState(20);
@@ -207,7 +208,8 @@ function Dashboard() {
         const cf = await c.send({ contracts_for: symbol });
         const list = (cf.contracts_for?.available ?? []) as any[];
         setAvailable(list.length ? new Set(list.map((x) => String(x.contract_type))) : null);
-      } catch { setAvailable(null); }
+        setCfList(list);
+      } catch { setAvailable(null); setCfList([]); }
     })();
   }, [symbol, status]);
 
@@ -324,6 +326,14 @@ function Dashboard() {
         const send = () => c.send({ buy: 1, price: Number((amount * 1.05 + 0.01).toFixed(2)), parameters: params });
         b = await (paired ? send() : withBackoff(send));
       } catch (e: any) {
+        if (/barrier/i.test(String(e.message))) {
+          const sug = derivBarriers(cfList, ct, unit);
+          if (sug) {
+            if (def.barrier === "offset" && sug.barrier != null) setOffset(Math.abs(sug.barrier) * (offset < 0 ? -1 : 1));
+            if (def.barrier === "range" && sug.barrier != null && sug.barrier2 != null) { setHi(Math.abs(sug.barrier)); setLo(-Math.abs(sug.barrier2)); }
+            throw new Error(`${ct} on ${symbol} rejected by Deriv: ${e.message}. Barrier reset to Deriv's allowed value (${sug.raw}) — place the order again.`);
+          }
+        }
         throw new Error(`${ct} on ${symbol} rejected by Deriv: ${e.message}`);
       }
       const id = Number(b?.buy?.contract_id);
@@ -384,7 +394,7 @@ function Dashboard() {
       if (results.some((r) => r === null)) return null;
       return results.reduce<number>((a, r) => a + (r ?? 0), 0);
     } finally { orderLock.current = false; setBusy(false); }
-  }, [account, duration, unit, symbol, def, digit, doubleDigit, offset, hi, lo, selectedTick, multiplier, growthRate, tpAmt, slAmt, available, status, balance, riskPercent, maxStake, trades, prices.length, setupId, directional]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [account, duration, unit, symbol, def, digit, doubleDigit, offset, hi, lo, selectedTick, multiplier, growthRate, tpAmt, slAmt, available, cfList, status, balance, riskPercent, maxStake, trades, prices.length, setupId, directional]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!auto || busy || status !== "on") return;
@@ -691,6 +701,7 @@ function Dashboard() {
               </Button>
             )}
             {def.barrier === "offset" && num(offset, setOffset, "Barrier offset (+/-)", 0.01)}
+            {def.barrier !== "none" && def.barrier !== "digit" && (() => { const sug = derivBarriers(cfList, def.types[0], unit); return sug ? <p className="text-xs text-muted-foreground">Deriv default barrier here: {sug.raw}</p> : null; })()}
             {def.barrier === "range" && <>{num(hi, setHi, "High barrier offset (+)", 0.01)}{num(lo, setLo, "Low barrier offset (-)", 0.01)}</>}
             {num(minConf, setMinConf, "Min confidence %")}
             {num(cooldown, setCooldown, "Pause after trade (sec)")}

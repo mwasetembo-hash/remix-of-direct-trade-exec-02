@@ -18,7 +18,7 @@ export const SOURCE_PRESET_NAME = "Mwaseli12 · GitHub defaults";
 
 // Do not import daily limits as session limits or loosen tighter user settings.
 export function sourceSettings(current: Record<string, unknown>) {
-  const currentRisk = current.riskPercent;
+  const currentRisk = current["riskPercent"];
   return {
     ...MWASELI12_PRESET,
     riskPercent: typeof currentRisk === "number" && Number.isFinite(currentRisk) && currentRisk > 0

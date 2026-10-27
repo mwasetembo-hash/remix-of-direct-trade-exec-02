@@ -1,4 +1,4 @@
-import { formatOffset, barrierErrors, derivBarriers, barrierCandidates } from "@/lib/barriers";
+import { formatOffset, barrierErrors, derivBarriers, barrierCandidates, barrierOffering } from "@/lib/barriers";
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { DerivClient, computeSignal, fetchAccounts, fetchOtpUrl, type DerivAccount } from "@/lib/deriv";
@@ -372,6 +372,7 @@ function Dashboard() {
     }
     };
     // Quote each barrier order first (quotes cost nothing); shrink the offset until Deriv accepts it.
+    const isRangeErr = (e: any) => /NotInRange|OutOfRange|BarrierOutOfRange/i.test(String(e?.code ?? "")) || /range|too (far|close)|between/i.test(String(e?.message ?? ""));
     const isBarrierErr = (e: any) => /barrier/i.test(String(e?.message ?? "") + String(e?.code ?? ""));
     if (def.barrier === "offset" || def.barrier === "range") {
       for (const order of prepared) {
@@ -379,11 +380,21 @@ function Dashboard() {
         const fields: ("barrier" | "barrier2")[] = def.barrier === "range" ? ["barrier", "barrier2"] : ["barrier"];
         const wanted = fields.map((f) => Number(order.req[f]));
         const lists = fields.map((f, i) => barrierCandidates(wanted[i]!, f === "barrier" ? sug?.barrier ?? null : sug?.barrier2 ?? null, decimals));
+        const offer = barrierOffering(cfList, order.ct, duration, unit);
+        if (offer) { orderLock.current = false; setBusy(false); addLog(`Order blocked: ${offer}`); setError(offer); return null; }
         let ok = false, lastErr = "";
-        for (let k = 0; k < Math.max(...lists.map((l) => l.length)); k++) {
-          fields.forEach((f, i) => { const l = lists[i]!; order.req[f] = formatOffset(l[Math.min(k, l.length - 1)]!, decimals); });
+        const tries = Math.max(...lists.map((l) => l.length)) + (sug ? 1 : 0);
+        for (let k = 0; k < tries; k++) {
+          const last = sug && k === tries - 1;
+          fields.forEach((f, i) => { const l = lists[i]!; order.req[f] = last ? (f === "barrier" ? sug!.rawBarrier : sug!.rawBarrier2 ?? order.req[f]) : formatOffset(l[Math.min(k, l.length - 1)]!, decimals); });
           try { await c.send(order.req); ok = true; break; }
-          catch (e: any) { lastErr = e.message; if (!isBarrierErr(e)) { ok = true; break; } }
+          catch (e: any) {
+            const sent = `${order.ct} ${symbol} ${duration}${unit} barrier ${fields.map((f) => order.req[f]).join("/")}`;
+            lastErr = `${e.message}${e.code ? ` [${e.code}]` : ""}${e.details ? ` ${JSON.stringify(e.details)}` : ""}`;
+            addLog(`Quote refused: ${sent} → ${lastErr}`);
+            if (!isBarrierErr(e)) { ok = true; break; }
+            if (!isRangeErr(e)) break;
+          }
         }
         if (!ok) {
           orderLock.current = false; setBusy(false);

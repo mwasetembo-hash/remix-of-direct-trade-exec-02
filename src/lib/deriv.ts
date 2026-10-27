@@ -87,7 +87,7 @@ export class DerivClient {
         if (id && this.pending.has(id)) {
           const p = this.pending.get(id)!;
           this.pending.delete(id);
-          msg.error ? p.reject(new Error(msg.error.message)) : p.resolve(msg);
+          msg.error ? p.reject(Object.assign(new Error(msg.error.message), { code: msg.error.code, details: msg.error.details })) : p.resolve(msg);
         }
         const set = this.subs.get(msg.msg_type);
         if (set && !msg.error) set.forEach((h) => h(msg));

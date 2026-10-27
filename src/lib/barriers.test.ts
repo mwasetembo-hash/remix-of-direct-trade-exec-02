@@ -23,3 +23,11 @@ describe("barrierCandidates", () => {
   it("starts at +0.61 and ends at Deriv default", () => { const c = barrierCandidates(0.61, 0.0066, 4); expect(c[0]).toBe(0.61); expect(c.at(-1)).toBe(0.0066); });
   it("keeps negative sign", () => expect(barrierCandidates(-0.61, 0.0066, 4).every((v) => v < 0)).toBe(true));
 });
+
+import { barrierOffering } from "./barriers";
+describe("barrierOffering", () => {
+  const list = [{ contract_type: "CALL", barriers: 1, expiry_type: "intraday", min_contract_duration: "15s" }, { contract_type: "CALL", barriers: 0, expiry_type: "tick", min_contract_duration: "1t" }];
+  it("blocks ticks when only minutes offered", () => expect(barrierOffering(list, "CALL", 5, "t")).toMatch(/15s/));
+  it("allows 1 minute", () => expect(barrierOffering(list, "CALL", 1, "m")).toBeNull());
+  it("blocks 10 seconds", () => expect(barrierOffering(list, "CALL", 10, "s")).toMatch(/15s/));
+});

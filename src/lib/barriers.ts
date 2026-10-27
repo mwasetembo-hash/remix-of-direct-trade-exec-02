@@ -25,7 +25,7 @@ export function barrierErrors(kind: string, barrier: "none" | "offset" | "digit"
 }
 
 /** Deriv's own default barrier(s) for a contract type at this duration unit, from contracts_for. */
-export function derivBarriers(list: any[], contractType: string, unit: string): { barrier: number | null; barrier2: number | null; raw: string } | null {
+export function derivBarriers(list: any[], contractType: string, unit: string): { barrier: number | null; barrier2: number | null; raw: string; rawBarrier: string; rawBarrier2: string | null } | null {
   const expiry = unit === "t" ? ["tick"] : unit === "d" ? ["daily"] : ["intraday", "daily"];
   const c = list.find((x) => x?.contract_type === contractType && Number(x?.barriers) > 0 && expiry.includes(String(x?.expiry_type)));
   if (!c) return null;
@@ -33,7 +33,7 @@ export function derivBarriers(list: any[], contractType: string, unit: string): 
   const b2 = c.low_barrier ?? null;
   if (b == null) return null;
   const n = (v: unknown) => (v == null || !/^[+-]/.test(String(v)) ? null : Number(v));
-  return { barrier: n(b), barrier2: n(b2), raw: b2 != null ? `${b} / ${b2}` : String(b) };
+  return { barrier: n(b), barrier2: n(b2), rawBarrier: String(b), rawBarrier2: b2 != null ? String(b2) : null, raw: b2 != null ? `${b} / ${b2}` : String(b) };
 }
 
 /** Offsets to try, from the trader's value shrinking toward Deriv's default, keeping the sign. */
@@ -47,4 +47,23 @@ export function barrierCandidates(wanted: number, derivDefault: number | null, d
     if (v > 0 && !out.includes(sign * v)) out.push(sign * v);
   }
   return out;
+}
+
+const toSec = (v: string) => { const m = /^(\d+)([tsmhd])$/.exec(v); if (!m) return null; return Number(m[1]) * ({ t: 1, s: 1, m: 60, h: 3600, d: 86400 } as Record<string, number>)[m[2]!]!; };
+
+/** Null when Deriv lists this barrier contract for the duration; otherwise a plain reason. */
+export function barrierOffering(list: any[], contractType: string, duration: number, unit: string): string | null {
+  if (!list.length) return null;
+  const withBarrier = list.filter((x) => x?.contract_type === contractType && Number(x?.barriers) > 0);
+  if (!withBarrier.length) return `Deriv does not offer ${contractType} with a barrier on this market`;
+  const isTick = unit === "t";
+  const match = withBarrier.filter((x) => (isTick ? x.expiry_type === "tick" : x.expiry_type !== "tick"));
+  if (!match.length) {
+    const mins = withBarrier.map((x) => x.min_contract_duration).filter(Boolean).join(" or ");
+    return isTick ? `Deriv does not offer ${contractType} with a barrier in ticks here — use at least ${mins || "a few minutes"}` : `Deriv only offers ${contractType} with a barrier in ticks here`;
+  }
+  const want = isTick ? duration : toSec(`${duration}${unit}`);
+  const mins = match.map((x) => String(x.min_contract_duration ?? ""));
+  const ok = match.some((x) => { const mn = String(x.min_contract_duration ?? ""); const mnv = isTick ? Number(mn.replace("t", "")) : toSec(mn); return mnv == null || Number.isNaN(mnv) || want == null || want >= mnv; });
+  return ok ? null : `${contractType} with a barrier needs at least ${mins.join(" or ")} on this market`;
 }

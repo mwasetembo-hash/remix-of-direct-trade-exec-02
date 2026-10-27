@@ -15,3 +15,4 @@
 - Keep balance protection and demo performance calculations in browser-safe trading-session helpers with focused tests; only confirmed settlement counts as a result.
 - Tag session trades with the executing account and demo status so strategy comparisons never mix accounts or real-money results.
 - Dispatch paired buys without per-leg retries and coordinate companion exits only when Deriv confirms sellability; broker execution is not atomic and results must remain independently confirmed.
+- Keep imported trading presets in browser-safe allowlisted helpers; exclude credentials, account state, automatic startup and incompatible daily limits so settings imports cannot bypass execution protections.

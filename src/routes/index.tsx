@@ -120,6 +120,7 @@ function Dashboard() {
 
   const settings = { symbol, kind, mode, stake, duration, unit, digit, doubleDigit, autoDouble, offset, hi, lo, minConf, maxLoss, takeProfit, maxTrades, lossStreakStop, sensitivity, setupId, cooldown, selectedTick, multiplier, growthRate, tpAmt, slAmt, brainGate, riskPercent, maxStake };
   const applySettings = (c: Partial<typeof settings>) => {
+    if (auto || busy || orderLock.current) { addLog("Stop autopilot and wait for the active order before changing profiles"); return; }
     const set: Record<string, (v: any) => void> = { symbol: setSymbol, kind: setKind, mode: setMode, stake: setStake, duration: setDuration, unit: setUnit, digit: setDigit, doubleDigit: setDoubleDigit, autoDouble: setAutoDouble, offset: setOffset, hi: setHi, lo: setLo, minConf: setMinConf, maxLoss: setMaxLoss, takeProfit: setTakeProfit, maxTrades: setMaxTrades, lossStreakStop: setLossStreakStop, sensitivity: setSensitivity, setupId: setSetupId, cooldown: setCooldown, selectedTick: setSelectedTick, multiplier: setMultiplier, growthRate: setGrowthRate, tpAmt: setTpAmt, slAmt: setSlAmt, brainGate: setBrainGate, riskPercent: setRiskPercent, maxStake: setMaxStake };
     for (const [k, v] of Object.entries(c)) { const setter = set[k]; if (setter && v !== undefined) setter(v); }
   };
@@ -824,7 +825,7 @@ function Dashboard() {
             </div>
           </section>
         )}
-        <Profiles settings={settings} onApply={applySettings} onLog={addLog} />
+        <Profiles settings={settings} onApply={applySettings} onLog={addLog} locked={auto || busy} />
         <Journal trades={trades} />
 
         <section className="glass rounded-sm p-4">

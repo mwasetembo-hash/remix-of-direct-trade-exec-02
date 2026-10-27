@@ -3,7 +3,7 @@
   "source": "https://github.com/mwasetembo-hash/Mwaseli12",
   "revision": "5e90846",
   "capabilities": [
-    {"capability":"Trading settings", "source":"BotSettings in TradingModels.kt", "outcome":"Map compatible defaults into an optional preset", "status":"in_progress", "next_action":"Add and verify preset application"},
+    {"capability":"Trading settings", "source":"BotSettings in TradingModels.kt", "outcome":"Optional preset verified in browser: apply, preserve limits, restore previous settings, reload saved preset, mobile fit; nine focused tests passed", "status":"verified", "next_action":null},
     {"capability":"Credentials", "source":"Source contains an embedded trading token", "outcome":"Exclude all credentials", "status":"excluded", "next_action":"Owner must revoke the publicly exposed token"},
     {"capability":"Native app and external integrations", "source":"Android/Kotlin application", "outcome":"Outside settings-only import", "status":"out_of_scope", "next_action":null},
     {"capability":"Barrier limits and account balances", "source":"Source-defined values", "outcome":"Do not treat hardcoded values as broker-verified data", "status":"excluded", "next_action":null},

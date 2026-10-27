@@ -1,0 +1,13 @@
+{
+  "scope": "Import compatible trading settings only; preserve the existing web application",
+  "source": "https://github.com/mwasetembo-hash/Mwaseli12",
+  "revision": "5e90846",
+  "capabilities": [
+    {"capability":"Trading settings", "source":"BotSettings in TradingModels.kt", "outcome":"Map compatible defaults into an optional preset", "status":"in_progress", "next_action":"Add and verify preset application"},
+    {"capability":"Credentials", "source":"Source contains an embedded trading token", "outcome":"Exclude all credentials", "status":"excluded", "next_action":"Owner must revoke the publicly exposed token"},
+    {"capability":"Native app and external integrations", "source":"Android/Kotlin application", "outcome":"Outside settings-only import", "status":"out_of_scope", "next_action":null},
+    {"capability":"Barrier limits and account balances", "source":"Source-defined values", "outcome":"Do not treat hardcoded values as broker-verified data", "status":"excluded", "next_action":null},
+    {"capability":"Martingale", "source":"BotSettings", "outcome":"Preserve fixed-stake protections", "status":"excluded", "next_action":null},
+    {"capability":"Live Deriv order", "source":"Existing system", "outcome":"No order sent during settings import", "status":"pending", "next_action":"Requires connected Deriv demo account"}
+  ]
+}

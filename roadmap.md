@@ -1,4 +1,5 @@
 # Tasks
+- [ ] Import compatible Mwaseli12 trading settings without credentials or weakened protections.
 - [x] Fix "Invalid barrier" on R_50 and 1HZ100V using Deriv-allowed barriers.
 - [ ] Coordinate double-order dispatch and expiry, and test paired execution.
 - [x] Add a live mining-style console and demo-only strategy comparison.
